@@ -330,7 +330,11 @@ function vr_external_image_import_images( $post_id , $force = false ) {
 				 * changed its ending (Squarespace tweaks) and we need to change its name 
 				 * back to the original value so it can be found in the post content 
 				 * and be replaced with the new local image URL.
+				 *
+				 * This no longer needs to happen because we now update the post content 
+				 * when we change the URL in vr_external_image_get_img_tags function
 				 */
+				/*
 				if ( strpos($content, $imgs[$i]) === false ) {	
 					$orig_img_url = str_replace( '.jpeg', '.?format=original',  $imgs[$i] );
 					$content = str_replace( $orig_img_url, $new_img, $content );
@@ -338,6 +342,9 @@ function vr_external_image_import_images( $post_id , $force = false ) {
 				else{
 					$content = str_replace( $imgs[$i], $new_img, $content );
 				}
+				*/
+				
+				$content = str_replace( $imgs[$i], $new_img, $content );
 				
 				$replaced = true;
 				$count++;
@@ -448,9 +455,18 @@ function vr_external_image_get_img_tags( $post_id ) {
 	for ( $i=0; $i<count($matches[0]); $i++ ) {
 		$uri = $matches[1][$i];
 		
-		//Really stupid Squarespace file formatting ends with the following after the readable filename: .?format=original
-		if ( strpos($uri, '.?format=original') !== false ) {	
+		//Really stupid Squarespace file formatting. Replacing in content is fine as URLs continue to work after adjustments
+		//#1: ends with the following after the readable filename: .?format=original
+		$orig_uri = $uri;
+		if ( strpos($uri, '.?format=original') !== false ) {
 			$uri = str_replace( '.?format=original', '.jpeg', $uri );
+		  wp_update_post(array('ID' => $post_id, 'post_content' => str_replace($orig_uri, $uri, $post->post_content)));
+			//print_r( $uri ); ////DEBUG
+		}
+		//#2: has .jpg in the middle of the uri with the filename repeated after it (wtf?)
+		if ( strpos($uri, '?format=original') !== false ) {
+			$uri = strtok($uri, '.jpg'); //strip everything after .jpg
+			wp_update_post(array('ID' => $post_id, 'post_content' => str_replace($orig_uri, $uri, $post->post_content)));
 			//print_r( $uri ); ////DEBUG
 		}
 		
