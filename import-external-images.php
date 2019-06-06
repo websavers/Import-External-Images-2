@@ -317,13 +317,28 @@ function vr_external_image_import_images( $post_id , $force = false ) {
 	$images_count_custom = get_option('vr_external_image_images_count_custom', 200);
 	
 	// $debugNew = array();
+	//error_log(print_r($imgs, true), 0); ///DEBUG
 	
 	$count = 0;
 	for ( $i=0; $i<count($imgs); $i++ ) {
 		if ( isset($imgs[$i]) && vr_is_allowed_file($imgs[$i]) && $count < $images_count_custom ) {
 			$new_img = vr_external_image_sideload( $imgs[$i], $post_id ); // $new_img = Localhost URI of the downloaded image
 			if ( $new_img ) {
-				$content = str_replace( $imgs[$i], $new_img, $content );
+				
+				/**
+				 * If the image file is not found in post content, it's because we've 
+				 * changed its ending (Squarespace tweaks) and we need to change its name 
+				 * back to the original value so it can be found in the post content 
+				 * and be replaced with the new local image URL.
+				 */
+				if ( strpos($content, $imgs[$i]) === false ) {	
+					$orig_img_url = str_replace( '.jpeg', '.?format=original',  $imgs[$i] );
+					$content = str_replace( $orig_img_url, $new_img, $content );
+				}
+				else{
+					$content = str_replace( $imgs[$i], $new_img, $content );
+				}
+				
 				$replaced = true;
 				$count++;
 				// $debugNew[] .= $imgs[$i];
@@ -432,6 +447,13 @@ function vr_external_image_get_img_tags( $post_id ) {
 
 	for ( $i=0; $i<count($matches[0]); $i++ ) {
 		$uri = $matches[1][$i];
+		
+		//Really stupid Squarespace file formatting ends with the following after the readable filename: .?format=original
+		if ( strpos($uri, '.?format=original') !== false ) {	
+			$uri = str_replace( '.?format=original', '.jpeg', $uri );
+			//print_r( $uri ); ////DEBUG
+		}
+		
 		$uriCheck = strtok($uri, '?'); //strip the querystring if it has one
 		$url_parts = parse_url($uriCheck);
 		$path_parts = pathinfo($url_parts['path']);
@@ -464,7 +486,7 @@ function vr_external_image_get_img_tags( $post_id ) {
 			}
 		}
 	}
-	//print_r( $matches );
+	//print_r( $result ); ////DEBUG
 	$result = array_unique($result);
 	return $result;
 }
