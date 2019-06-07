@@ -456,13 +456,20 @@ function vr_external_image_get_img_tags( $post_id ) {
 		$uri = $matches[1][$i];
 		
 		//Really stupid Squarespace file formatting. Replacing in content is fine as URLs continue to work after adjustments
-		//#1: ends with the following after the readable filename: .?format=original
+		//#1: ends with the following types of patterns at end of filename: .?format=original or .?format=1000w
 		$orig_uri = $uri;
-		if ( strpos($uri, '.?format=original') !== false ) {
+		$matches = array();
+		if ( preg_match('/(\.\?format=.*)$/', $open_email_msg, $matches) ){
+			$uri = str_replace( $matches[1], '.jpeg', $uri );
+			wp_update_post(array('ID' => $post_id, 'post_content' => str_replace($orig_uri, $uri, $post->post_content)));
+		}
+		/*	
+		if ( strpos($uri, '') !== false ) {
 			$uri = str_replace( '.?format=original', '.jpeg', $uri );
 		  wp_update_post(array('ID' => $post_id, 'post_content' => str_replace($orig_uri, $uri, $post->post_content)));
 			//print_r( $uri ); ////DEBUG
 		}
+		*/
 		//#2: has .jpg in the middle of the uri with the filename repeated after it (wtf?)
 		if ( strpos($uri, '?format=original') !== false ) {
 			$uri = strtok($uri, '.jpg'); //strip everything after .jpg
